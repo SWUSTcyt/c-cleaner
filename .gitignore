@@ -18,7 +18,7 @@ cleanup_log.json
 cleanup_result.txt
 
 # Claude Code
-.claude/
+.claude/settings.local.json
 
 # OS
 Thumbs.db
