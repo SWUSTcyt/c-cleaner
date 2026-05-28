@@ -52,16 +52,42 @@ python disk_analyzer.py D:/      # 分析指定盘符
 ├── core/
 │   ├── utils.py            # 工具函数
 │   └── cleaner.py          # 清理执行器
-└── scanner/
-    ├── temp.py             # 临时文件
-    ├── recycle.py          # 回收站
-    ├── browser.py          # 浏览器缓存
-    ├── windows_update.py   # Update 缓存
-    ├── logs.py             # 日志文件
-    ├── hibernate.py        # 休眠文件
-    ├── large_files.py      # 大文件扫描
-    └── duplicates.py       # 重复文件检测
+├── scanner/
+│   ├── temp.py             # 临时文件
+│   ├── recycle.py          # 回收站
+│   ├── browser.py          # 浏览器缓存
+│   ├── windows_update.py   # Update 缓存
+│   ├── logs.py             # 日志文件
+│   ├── hibernate.py        # 休眠文件
+│   ├── large_files.py      # 大文件扫描
+│   └── duplicates.py       # 重复文件检测
+└── .claude/
+    └── skills/
+        ├── disk-analysis.md   # 磁盘深度分析 skill
+        └── context-usage.md   # 上下文使用率检查 skill
 ```
+
+## Claude Code Skills
+
+本项目包含为 Claude Code 设计的 skill 文件，位于 `.claude/skills/` 目录。
+
+### 磁盘深度分析 (`/disk-analysis`)
+
+在 Claude Code 中输入 `/disk-analysis`，将自动执行完整的磁盘空间分析流程：
+
+1. **磁盘总览** — 容量、已用、剩余空间
+2. **根目录扫描** — 各文件夹大小 TOP 10
+3. **用户目录深入** — AppData、.conda、.cache 等重点区域
+4. **AppData 分层分析** — Local / Roaming 子目录 TOP 8
+5. **高频清理目标检查** — HuggingFace 缓存、PyTorch 缓存、Conda 环境、npm/pip/Yarn/uv 缓存等
+6. **大文件扫描** — 用户目录下 >500MB 文件 TOP 20
+7. **分类报告** — 分为「可安全清理」「需要确认」「建议转移」三类
+
+扫描过程中使用后台任务，大目录可能需要几分钟。
+
+### 上下文使用率检查 (`/context-usage`)
+
+在 Claude Code 中输入 `/context-usage`，可查看当前对话的 token 使用率和剩余空间。
 
 ## License
 
