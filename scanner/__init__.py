@@ -1,4 +1,4 @@
-from scanner import temp, recycle, browser, windows_update, logs, hibernate, large_files, duplicates
+from scanner import temp, recycle, browser, windows_update, logs, hibernate, large_files, duplicates, data_disk
 
 ALL_SCANNERS = {
     "临时文件": temp,

@@ -45,7 +45,7 @@ def _walk(dir_path: str, min_size: int, results: list[dict]):
                             "category": CATEGORY,
                         })
                 elif entry.is_dir(follow_symlinks=False):
-                    if entry.name not in SKIP_DIRS and not entry.name.startswith("."):
+                    if entry.name not in SKIP_DIRS and entry.name != ".git":
                         _walk(entry.path, min_size, results)
             except (PermissionError, OSError):
                 continue
