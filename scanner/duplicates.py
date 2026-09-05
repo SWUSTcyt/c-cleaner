@@ -80,7 +80,7 @@ def _collect_by_size(dir_path: str, min_size: int, size_groups: dict[int, list[s
                     if size >= min_size:
                         size_groups[size].append(entry.path)
                 elif entry.is_dir(follow_symlinks=False):
-                    if entry.name not in SKIP_DIRS and not entry.name.startswith("."):
+                    if entry.name not in SKIP_DIRS and entry.name != ".git":
                         _collect_by_size(entry.path, min_size, size_groups)
             except (PermissionError, OSError):
                 continue
