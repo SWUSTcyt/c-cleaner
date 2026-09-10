@@ -60,9 +60,12 @@ KIND_LABEL = {
     "pagefile": "系统虚拟内存",
 }
 
+# 自定义路径的聊天数据：只清空内容，必须保留文件夹，否则软件会改回 C 盘文档
+CHAT_KEEP_DIR_KINDS = {"qq_chat", "old_wechat"}
 
-def _item(path: str, size: int, tier: str, kind: str, reason: str) -> dict:
-    return {
+
+def _item(path: str, size: int, tier: str, kind: str, reason: str, **extra) -> dict:
+    data = {
         "path": path,
         "size": size,
         "category": KIND_LABEL.get(kind, kind),
@@ -70,6 +73,10 @@ def _item(path: str, size: int, tier: str, kind: str, reason: str) -> dict:
         "kind": kind,
         "reason": reason,
     }
+    if kind in CHAT_KEEP_DIR_KINDS:
+        data["wipe_contents"] = True
+    data.update(extra)
+    return data
 
 
 def _is_version_name(name: str) -> bool:
@@ -196,7 +203,7 @@ def _collect_patterns(root: str, dir_size: dict[str, int], children: dict[str, l
     wechat_old = [p for p in dir_size if _dir_name(p) == "WeChat Files"]
     if wechat_new and wechat_old:
         for p in wechat_old:
-            add(_item(p, dir_size.get(p, 0), TIER_CONFIRM, "old_wechat", "旧版微信目录，当前已有微信 4.x 数据"))
+            add(_item(p, dir_size.get(p, 0), TIER_CONFIRM, "old_wechat", "清空旧版微信聊天数据，保留数据文件夹"))
         for p in wechat_new:
             add(_item(p, dir_size.get(p, 0), TIER_KEEP, "wechat_current", "当前微信 4.x 聊天数据，默认保留"))
     elif wechat_new:
@@ -206,19 +213,21 @@ def _collect_patterns(root: str, dir_size: dict[str, int], children: dict[str, l
         for p in wechat_old:
             add(_item(p, dir_size.get(p, 0), TIER_KEEP, "wechat_current", "微信聊天数据，默认保留"))
 
-    # QQ 聊天记录（不用 QQ 后可确认删除；请先退出 QQ）
+    # QQ 聊天记录：清空内容，保留数据文件夹（QQ 仍指向该路径）
     for path, size in dir_size.items():
         name = _dir_name(path)
         name_l = name.lower()
         if size < 100 * 1024 * 1024:
             continue
-        is_qq = (
-            name == "Tencent Files"
-            or "聊天消息" in name
-            or (name_l.startswith("qq_") and "download" not in name_l)
-        )
+        is_qq = "聊天消息" in name or (name_l.startswith("qq_") and "download" not in name_l)
         if is_qq:
-            add(_item(path, size, TIER_CONFIRM, "qq_chat", "QQ 本地聊天记录，删除前请先退出 QQ"))
+            add(_item(
+                path,
+                size,
+                TIER_CONFIRM,
+                "qq_chat",
+                "清空 QQ 聊天记录并保留自定义数据文件夹，避免软件改回 C 盘文档",
+            ))
 
     # Docker 虚拟盘（优先具体目录，避免和父目录、vhdx 重复统计）
     for path, size in dir_size.items():
