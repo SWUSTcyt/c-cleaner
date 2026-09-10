@@ -82,6 +82,16 @@ def clean_items(items: list[dict], category: str) -> tuple[int, int, int]:
         deleted = False
         if os.path.isfile(path):
             deleted = safe_delete(path)
+        elif os.path.isdir(path) and (
+            item.get("wipe_contents") or item.get("kind") in ("qq_chat", "old_wechat")
+        ):
+            s, f, freed = wipe_dir_contents(path)
+            success_count += s
+            fail_count += f
+            freed_bytes += freed
+            if f and len(failed_samples) < MAX_FAIL_SAMPLES:
+                failed_samples.append(path)
+            continue
         elif os.path.isdir(path):
             try:
                 _rmtree_readonly(path)
