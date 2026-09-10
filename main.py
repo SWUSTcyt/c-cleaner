@@ -7,9 +7,9 @@ sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
 
 from core.utils import format_size, is_admin
-from core.cleaner import clean_items
+from core.cleaner import clean_items, log_summary, wipe_dir_contents
 from core.drives import data_drives, format_drive_list, system_drive
-from scanner import temp, recycle, browser, windows_update, logs, hibernate, large_files, duplicates
+from scanner import temp, recycle, browser, windows_update, logs, hibernate, large_files, duplicates, caches
 from scanner.data_disk import (
     KIND_LABEL,
     flatten_reports,
@@ -20,17 +20,23 @@ from scanner.data_disk import (
 )
 
 
-# 菜单项定义：(名称, 扫描函数)
-C_MENU_ITEMS = [
+# C 盘可随「扫描 C 盘」一起确认清理的项目（不含大文件/重复文件/休眠）
+C_JUNK_ITEMS = [
     ("临时文件", temp.scan),
     ("回收站", recycle.scan),
     ("浏览器缓存", browser.scan),
     ("Windows Update 缓存", windows_update.scan),
     ("日志和转储文件", logs.scan),
+    ("已知缓存", caches.scan),
+]
+
+C_EXTRA_ITEMS = [
     ("休眠文件", hibernate.scan),
     ("大文件扫描 (>100MB)", lambda: large_files.scan(min_size_mb=100)),
     ("重复文件检测 (>1MB)", lambda: duplicates.scan(min_size_kb=1024)),
 ]
+
+C_MENU_ITEMS = C_JUNK_ITEMS + C_EXTRA_ITEMS
 
 
 def print_banner():
@@ -52,11 +58,15 @@ def print_banner():
 def print_menu():
     others = format_drive_list(data_drives())
     print("请选择操作:")
-    print("  1. 扫描 C 盘（系统垃圾）")
+    print("  1. 扫描 C 盘（系统垃圾 + 已知缓存）")
     print(f"  2. 扫描其他盘（数据盘: {others}）")
     print("  3. 扫描全部")
     print("  ---------- C 盘单项 ----------")
-    for i, (name, _) in enumerate(C_MENU_ITEMS, 4):
+    for i, (name, _) in enumerate(C_JUNK_ITEMS, 4):
+        print(f"  {i}. {name}")
+    extra_start = 4 + len(C_JUNK_ITEMS)
+    print("  ---------- 需单独确认 ----------")
+    for i, (name, _) in enumerate(C_EXTRA_ITEMS, extra_start):
         print(f"  {i}. {name}")
     print("  0. 退出")
     print()
@@ -112,8 +122,18 @@ def display_c_results(results: dict[str, list[dict]]):
             extra = f' ({items[0].get("item_count", "?")} 项)'
         if items and items[0].get("special") == "hibernate":
             extra = " (需管理员权限)"
+        if items and items[0].get("need_admin"):
+            extra = " (需管理员，将跳过)"
+        if name == "已知缓存":
+            extra = f"  目录"
 
         print(f"  {name:<24} {format_size(total_size):>10}  {count} 个文件{extra}")
+        if name == "已知缓存":
+            for item in items[:8]:
+                reason = item.get("reason", "")
+                print(f"      {format_size(item['size']):>10}  {reason}")
+            if len(items) > 8:
+                print(f"      ... 其余 {len(items) - 8} 项")
 
     print("-" * 50)
     print(f"  {'合计':<24} {format_size(grand_total):>10}")
@@ -152,6 +172,24 @@ def execute_clean(results: dict[str, list[dict]]):
                 print(f"失败: {msg}")
             continue
 
+        if items[0].get("special") == "windows_update":
+            print(f"  清理 {name}...", end=" ", flush=True)
+            if items[0].get("need_admin"):
+                print("跳过（需要管理员权限）")
+                continue
+            s = f = freed = 0
+            for item in items:
+                cs, cf, cfree = wipe_dir_contents(item["path"])
+                s += cs
+                f += cf
+                freed += cfree
+            log_summary(name, s, f, freed)
+            total_success += s
+            total_fail += f
+            total_freed += freed
+            print(f"完成 ({format_size(freed)})")
+            continue
+
         print(f"  清理 {name}...", end=" ", flush=True)
         s, f, freed = clean_items(items, name)
         total_success += s
@@ -174,10 +212,10 @@ def run_scan_c_all():
     """扫描 C 盘全部系统垃圾"""
     print()
     sys_label = system_drive().rstrip("\\")
-    print(f"正在扫描系统盘 {sys_label} ...")
+    print(f"正在扫描系统盘 {sys_label} （系统垃圾 + 已知缓存）...")
     print()
     results = {}
-    for name, scan_func in C_MENU_ITEMS:
+    for name, scan_func in C_JUNK_ITEMS:
         items = scan_category(name, scan_func)
         results[name] = items
 

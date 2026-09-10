@@ -14,6 +14,7 @@ os.system("chcp 65001 >nul 2>&1")
 
 from core.utils import format_size, get_dir_size
 from core.drives import data_drives, format_drive_list, normalize_root, system_drive
+from scanner.caches import SAFE_TARGETS
 from scanner.data_disk import (
     flatten_reports,
     print_drive_overview,
@@ -118,22 +119,15 @@ def analyze_system_drive():
                 print(f"  {format_size(size):>12}  {name}")
 
     print_section("已知清理目标")
-    targets = [
-        (".cache/huggingface", "HF 模型缓存，可重下"),
-        (".cache/torch", "PyTorch 缓存"),
-        (".conda/envs", "Conda 环境"),
-        (".conda/pkgs", "Conda 包缓存"),
-        ("AppData/Local/uv", "uv 包缓存"),
-        ("AppData/Local/Yarn", "Yarn 缓存"),
-        ("AppData/Local/npm", "npm 缓存"),
-        ("AppData/Local/pip", "pip 缓存"),
+    user_rel = list(SAFE_TARGETS) + [
+        (".conda/envs", "Conda 环境，删除需确认"),
     ]
     found = False
-    for rel_path, desc in targets:
+    for rel_path, desc in user_rel:
         full = os.path.join(user_home, rel_path.replace("/", os.sep))
-        if os.path.isdir(full):
-            size = get_dir_size(full)
-            if size > 100 * 1024 * 1024:
+        if os.path.isdir(full) or os.path.isfile(full):
+            size = get_dir_size(full) if os.path.isdir(full) else os.path.getsize(full)
+            if size > 10 * 1024 * 1024:
                 found = True
                 print(f"  {format_size(size):>12}  {rel_path}  ({desc})")
     if not found:
