@@ -1,6 +1,7 @@
 import os
 import ctypes
 import shutil
+import stat
 
 
 def format_size(size_bytes: int) -> str:
@@ -20,19 +21,42 @@ def is_admin() -> bool:
         return False
 
 
+def _clear_readonly(path: str):
+    """去掉只读属性，避免 Windows 上 shutil/os.remove 直接失败。"""
+    try:
+        os.chmod(path, stat.S_IWRITE)
+    except OSError:
+        pass
+
+
+def _rmtree_readonly(path: str):
+    def _onerror(func, p, _exc):
+        _clear_readonly(p)
+        func(p)
+
+    shutil.rmtree(path, onerror=_onerror)
+
+
 def safe_delete(file_path: str) -> bool:
     """安全删除单个文件，跳过占用中或权限不足的文件，成功返回 True"""
     try:
         os.remove(file_path)
         return True
-    except (PermissionError, OSError):
+    except PermissionError:
+        try:
+            _clear_readonly(file_path)
+            os.remove(file_path)
+            return True
+        except OSError:
+            return False
+    except OSError:
         return False
 
 
 def safe_delete_dir(dir_path: str) -> bool:
     """安全删除目录，跳过占用中或权限不足的目录"""
     try:
-        shutil.rmtree(dir_path)
+        _rmtree_readonly(dir_path)
         return True
     except (PermissionError, OSError):
         return False

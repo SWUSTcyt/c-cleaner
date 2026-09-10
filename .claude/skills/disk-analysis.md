@@ -25,15 +25,16 @@ python disk_analyzer.py E:           # 只看指定数据盘（调试）
 2. 根目录 TOP 10
 3. 用户目录 TOP 10（AppData、.conda、.cache、Downloads）
 4. AppData Local / Roaming TOP 8
-5. 已知缓存：HF / Torch / Conda / uv / Yarn / npm / pip
-6. 用户目录 >500MB 文件（不要跳过 `.cache`、`.lmstudio` 等点目录）
+5. 已知缓存：HF / Torch / Conda pkgs / uv / Yarn / npm / pip（`python main.py` 选项 1 可清）
+6. Conda 环境、WSL 虚拟盘等只报告，删除需确认
+7. 用户目录 >500MB 文件（不要跳过 `.cache`、`.lmstudio` 等点目录）
 
 ## 数据盘要点
 
 用 `scanner/data_disk.py` 的已知模式，输出三类：
 
 - **可安全清理**：更新缓存、旁边已有解压目录的压缩包
-- **需要确认**：软件旧版本、旧版微信、Docker、本地模型、安装包、Steam 附加工具
+- **需要确认**：软件旧版本、旧版微信、QQ 聊天记录、Docker、本地模型、安装包、Steam 附加工具
 - **建议保留**：Steam 游戏、当前微信、pagefile（不要删）
 
 ## 注意事项

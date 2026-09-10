@@ -1,5 +1,5 @@
 import os
-from core.utils import scan_dir_files
+from core.utils import get_dir_size, is_admin
 
 
 CATEGORY = "Windows Update 缓存"
@@ -10,19 +10,20 @@ UPDATE_DIRS = [
 
 
 def scan() -> list[dict]:
-    """扫描 Windows Update 缓存"""
+    """扫描 Update 下载缓存。无管理员权限时只报告大小，不枚举文件。"""
     results = []
+    admin = is_admin()
     for update_dir in UPDATE_DIRS:
         if not os.path.isdir(update_dir):
             continue
-        for file_path in scan_dir_files(update_dir):
-            try:
-                size = os.path.getsize(file_path)
-            except OSError:
-                continue
-            results.append({
-                "path": file_path,
-                "size": size,
-                "category": CATEGORY,
-            })
+        size = get_dir_size(update_dir)
+        if size <= 0:
+            continue
+        results.append({
+            "path": update_dir,
+            "size": size,
+            "category": CATEGORY,
+            "special": "windows_update",
+            "need_admin": not admin,
+        })
     return results

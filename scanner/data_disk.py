@@ -50,6 +50,7 @@ KIND_LABEL = {
     "dup_archive": "已解压的压缩包",
     "old_version": "软件旧版本",
     "old_wechat": "旧版微信目录",
+    "qq_chat": "QQ 聊天记录",
     "docker": "Docker 虚拟盘",
     "models": "本地 AI 模型",
     "installer": "下载目录安装包",
@@ -204,6 +205,20 @@ def _collect_patterns(root: str, dir_size: dict[str, int], children: dict[str, l
     else:
         for p in wechat_old:
             add(_item(p, dir_size.get(p, 0), TIER_KEEP, "wechat_current", "微信聊天数据，默认保留"))
+
+    # QQ 聊天记录（不用 QQ 后可确认删除；请先退出 QQ）
+    for path, size in dir_size.items():
+        name = _dir_name(path)
+        name_l = name.lower()
+        if size < 100 * 1024 * 1024:
+            continue
+        is_qq = (
+            name == "Tencent Files"
+            or "聊天消息" in name
+            or (name_l.startswith("qq_") and "download" not in name_l)
+        )
+        if is_qq:
+            add(_item(path, size, TIER_CONFIRM, "qq_chat", "QQ 本地聊天记录，删除前请先退出 QQ"))
 
     # Docker 虚拟盘（优先具体目录，避免和父目录、vhdx 重复统计）
     for path, size in dir_size.items():
